@@ -1,6 +1,7 @@
 #include "wintoastlib.h"
 #include <string>
 #include <windows.h>
+#include <chrono>
 
 using namespace WinToastLib;
 
@@ -16,7 +17,7 @@ public:
         exit(16 + actionIndex);
     }
 
-    void toastActivated(const char* response) const {
+    void toastActivated(char const* response) const {
         std::wcout << L"The user clicked on action #" << response << std::endl;
     }
 
@@ -24,7 +25,7 @@ public:
         switch (state) {
             case UserCanceled:
                 std::wcout << L"The user dismissed this toast" << std::endl;
-                exit(1);
+                // exit(1);
                 break;
             case TimedOut:
                 std::wcout << L"The toast has timed out" << std::endl;
@@ -32,7 +33,7 @@ public:
                 break;
             case ApplicationHidden:
                 std::wcout << L"The application hid the toast using ToastNotifier.hide()" << std::endl;
-                exit(3);
+                // exit(3);
                 break;
             default:
                 std::wcout << L"Toast not activated" << std::endl;
@@ -47,7 +48,7 @@ public:
     }
 };
 
-enum Results {
+enum class Results : uint8_t {
     ToastClicked,             // user clicked on the toast
     ToastDismissed,           // user dismissed the toast
     ToastTimeOut,             // toast timed out
@@ -89,6 +90,7 @@ void print_help() {
 }
 
 int wmain(int argc, LPWSTR* argv) {
+    std::cout << argc << std::endl;
     // if (argc == 1) {
     //     print_help();
     //     return 0;
@@ -96,16 +98,16 @@ int wmain(int argc, LPWSTR* argv) {
 
     if (!WinToast::isCompatible()) {
         std::wcerr << L"Error, your system in not supported!" << std::endl;
-        return Results::SystemNotSupported;
+        return static_cast<int>(Results::SystemNotSupported);
     }
 
-    std::wstring appName        = L"Console WinToast Example";
-    std::wstring appUserModelID = L"WinToast Console Example";
-    std::wstring text           = L"";
+    std::wstring appName        = L"Rset Remainder";
+    std::wstring appUserModelID = L"Rset Remainder";
+    std::wstring text           = L"Time to rest for 5 min";
     std::wstring imagePath      = L"";
     std::wstring attribute      = L"default";
-    std::vector<std::wstring> actions;
-    INT64 expiration = 0;
+    std::vector<std::wstring> actions{L"Yes", L"No"};
+    INT64 expiration = 1000;
 
     bool onlyCreateShortcut                   = false;
     WinToastTemplate::AudioOption audioOption = WinToastTemplate::AudioOption::Default;
@@ -135,7 +137,7 @@ int wmain(int argc, LPWSTR* argv) {
             return 0;
         } else {
             std::wcerr << L"Option not recognized: " << argv[i] << std::endl;
-            return Results::UnhandledOption;
+            return static_cast<int>(Results::UnhandledOption);
         }
     }
 
@@ -157,7 +159,7 @@ int wmain(int argc, LPWSTR* argv) {
 
     if (!WinToast::instance()->initialize()) {
         std::wcerr << L"Error, your system in not compatible!" << std::endl;
-        return Results::InitializationFailure;
+        return static_cast<int>(Results::InitializationFailure);
     }
 
     WinToastTemplate templ(!imagePath.empty() ? WinToastTemplate::ImageAndText02 : WinToastTemplate::Text02);
@@ -173,14 +175,19 @@ int wmain(int argc, LPWSTR* argv) {
     if (expiration) {
         templ.setExpiration(expiration);
     }
-
-    if (WinToast::instance()->showToast(templ, new CustomHandler()) < 0) {
-        std::wcerr << L"Could not launch your toast notification!";
-        return Results::ToastFailed;
+    templ.setDuration(WinToastTemplate::Short);
+    for (int i = 0; i < 10; i++) {
+        WinToast::instance()->clear();
+        templ.setTextField(L"Current Time:"+std::to_wstring(i), WinToastTemplate::FirstLine);
+        if (WinToast::instance()->showToast(templ, new CustomHandler()) < 0) {
+            std::wcerr << L"Could not launch your toast notification!";
+            return static_cast<int>(Results::ToastFailed);
+        }
+        Sleep(1000*60);
     }
 
     // Give the handler a chance for 15 seconds (or the expiration plus 1 second)
     Sleep(expiration ? (DWORD) expiration + 1000 : 15000);
 
-    exit(2);
+    // exit(2);
 }
