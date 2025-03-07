@@ -89,10 +89,10 @@ void print_help() {
 }
 
 int wmain(int argc, LPWSTR* argv) {
-    if (argc == 1) {
-        print_help();
-        return 0;
-    }
+    // if (argc == 1) {
+    //     print_help();
+    //     return 0;
+    // }
 
     if (!WinToast::isCompatible()) {
         std::wcerr << L"Error, your system in not supported!" << std::endl;
